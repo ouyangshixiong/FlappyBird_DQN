@@ -62,7 +62,7 @@ def run_episode(agent, env, rpm):
     return total_reward
 
 
-def evaluate(agent, env, render=False):
+def evaluate(agent, env):
     # test part, run 5 episodes and average
     eval_reward = []
     for i in range(5):
@@ -94,7 +94,7 @@ def evaluate(agent, env, render=False):
 def main():
     game = FlappyBird()
     env = PLE(game, fps=30, display_screen=False)
-    env_test = PLE(game, fps=30, display_screen=False)
+    env_evaluate = PLE(game, fps=30, display_screen=False)
     obs_dim = len(env.getGameState())
     action_dim = 2 # 只能是up键，还有一个其它，所以是2
 
@@ -130,11 +130,57 @@ def main():
             total_reward = run_episode(agent, env, rpm)
             episode += 1
 
-        eval_reward = evaluate(agent, env_test)
+        eval_reward = evaluate(agent, env_evaluate)
         logger.info('episode:{}    test_reward:{}'.format(
             episode, eval_reward))
 
     agent.save('./model_dir')
 
+def test():
+    game = FlappyBird()
+    env = PLE(game, fps=30, display_screen=True)
+    obs_dim = len(env.getGameState())
+    action_dim = 2 # 只能是up键，还有一个其它，所以是2
+    model = Model(act_dim=action_dim)
+    algorithm = parl.algorithms.DQN(
+        model, act_dim=action_dim, gamma=GAMMA, lr=LEARNING_RATE)
+    agent = Agent(
+        algorithm,
+        obs_dim=obs_dim,
+        act_dim=action_dim,
+        e_greed=0.2,  # explore
+        e_greed_decrement=1e-6
+    )
+    if os.path.exists('./model_dir'):
+        agent.restore('./model_dir')
+    # test part, run 5 episodes and average
+    eval_reward = []
+    for i in range(5):
+        env.init()
+        episode_reward = 0
+        isOver = False
+        step = 0
+        while not isOver:
+            if step == 0:
+                reward = env.act(None)
+                done = False
+            else:
+                obs = list(env.getGameState().values())
+                action = agent.predict(obs)
+                if action == 1:
+                    act = actions["up"]
+                else:
+                    act = None
+                reward = env.act(act)
+                isOver = env.game_over()
+                episode_reward += reward
+            step += 1
+            eval_reward.append(episode_reward)
+            if step > MAX_STEP:
+                break;
+        env.reset_game()
+    return np.mean(eval_reward)
+
 if __name__ == '__main__':
-    main()
+    # main()
+    test()
