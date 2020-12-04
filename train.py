@@ -1,6 +1,7 @@
 from ple import PLE
 from ple.games.flappybird import FlappyBird
 from pygame.constants import K_w
+import time
 import numpy as np
 import parl
 from parl.utils import logger
@@ -165,6 +166,7 @@ def test():
                 reward = env.act(None)
                 done = False
             else:
+                time.sleep(0.01) #windows running too fast, slow it down
                 obs = list(env.getGameState().values())
                 action = agent.predict(obs)
                 if action == 1:
